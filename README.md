@@ -4,7 +4,13 @@ API test automation written in TypeScript, using [Vitest](https://vitest.dev/) a
 
 ## API under test
 
-A local Users REST API (Express + SQLite) in `API/`. It listens on `http://127.0.0.1:3000` by default and stores data in `data/users.db`, created on first start.
+A local Users REST API (Express + SQLite) in `API/`. It listens on `https://127.0.0.1:3000` by default and stores data in `data/users.db`, created on first start.
+
+The API is HTTPS only. On first start it creates a self-signed certificate for `localhost`, `127.0.0.1` and `::1` in `certs/` (git-ignored, valid for one year; delete the folder to get a new one). Clients must trust `certs/localhost.crt`:
+
+- **Vitest**: `vitest.config.ts` trusts it automatically when the file exists, so start the API before running tests.
+- **curl**: `curl --cacert certs/localhost.crt https://127.0.0.1:3000/health`
+- **Postman**: add it under Settings → Certificates → CA certificates, or turn off SSL certificate verification.
 
 | Method   | Path         | Body                                    | Success                    |
 | -------- | ------------ | --------------------------------------- | -------------------------- |
@@ -26,7 +32,7 @@ A database from before ids became UUIDs is upgraded automatically on startup: ex
 
 For manual testing, import [postman/Users-API.postman_collection.json](postman/Users-API.postman_collection.json) into Postman. Run **Create user** first; it stores `userId` and `userEmail` for the other requests.
 
-Settings (`.env`): `HOST` (default `127.0.0.1`), `PORT` (default `3000`), `DB_PATH` (default `data/users.db`).
+Settings (`.env`): `HOST` (default `127.0.0.1`), `PORT` (default `3000`), `DB_PATH` (default `data/users.db`), `TLS_CERT_PATH` (default `certs/localhost.crt`), `TLS_KEY_PATH` (default `certs/localhost.key`). To use your own certificate (e.g. one made with mkcert), point the two TLS paths at it.
 
 ## Requirements
 
@@ -59,6 +65,7 @@ API_KEY=your-api-key
 
 ```
 API/     Users REST API (config, models, controllers, routes)
+certs/   Local HTTPS certificate (git-ignored)
 data/    SQLite database (git-ignored)
 postman/ Postman collection for manual testing
 src/     Shared code (API clients, helpers)

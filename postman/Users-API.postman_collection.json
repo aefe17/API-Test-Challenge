@@ -1,11 +1,11 @@
 {
   "info": {
     "name": "Users API (local)",
-    "description": "Manual requests for the local Users CRUD API.\n\nStart the API with `pnpm start`, then run **Create user** first: it saves the new user's `ID` and `Email` into the collection variables `userId` and `userEmail`, which the other requests use.\n\nDates (`CreatedAt`, `UpdatedAt`) are returned as short dates, e.g. `2026-10-29`.",
+    "description": "Manual requests for the local Users CRUD API.\n\nThe API uses HTTPS with a self-signed certificate created on first start. Either add `certs/localhost.crt` in Postman under Settings → Certificates → CA certificates, or turn off SSL certificate verification in Settings → General.\n\nStart the API with `pnpm start`, then run **Create user** first: it saves the new user's `ID` and `Email` into the collection variables `userId` and `userEmail`, which the other requests use.\n\nDates (`CreatedAt`, `UpdatedAt`) are returned as short dates, e.g. `2026-10-29`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://127.0.0.1:3000" },
+    { "key": "baseUrl", "value": "https://127.0.0.1:3000" },
     { "key": "userId", "value": "" },
     { "key": "userEmail", "value": "" }
   ],
