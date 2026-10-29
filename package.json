@@ -5,6 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "tsx --env-file-if-exists=.env API/server.ts",
+    "dev": "tsx watch --env-file-if-exists=.env API/server.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
