@@ -12,7 +12,12 @@ import {
 } from '../models/userModel';
 
 const USER_FIELDS: (keyof User)[] = ['Name', 'LastName', 'Email', 'Password'];
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Local part: no leading, trailing or repeated dots. Domain: labels of letters, digits and inner
+// hyphens, ending in a TLD of at least two letters.
+const EMAIL_PATTERN =
+    /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_EMAIL_LOCAL_LENGTH = 64;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -23,6 +28,12 @@ function formatDate(date: Date): string {
 
 function toResponse(user: PublicUser) {
     return { ...user, CreatedAt: formatDate(user.CreatedAt), UpdatedAt: formatDate(user.UpdatedAt) };
+}
+
+function isValidEmail(email: string): boolean {
+    return email.length <= MAX_EMAIL_LENGTH
+        && email.indexOf('@') <= MAX_EMAIL_LOCAL_LENGTH
+        && EMAIL_PATTERN.test(email);
 }
 
 type Validation =
@@ -52,7 +63,7 @@ function validateUser(body: unknown, partial: boolean): Validation {
         data[field] = field === 'Password' ? value : value.trim();
     }
 
-    if (data.Email !== undefined && !EMAIL_PATTERN.test(data.Email)) {
+    if (data.Email !== undefined && !isValidEmail(data.Email)) {
         errors.push('Email must be a valid email address');
     }
     if (data.Password !== undefined && data.Password.length < MIN_PASSWORD_LENGTH) {
