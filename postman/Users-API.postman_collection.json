@@ -1,0 +1,189 @@
+{
+  "info": {
+    "name": "Users API (local)",
+    "description": "Manual requests for the local Users CRUD API.\n\nStart the API with `pnpm start`, then run **Create user** first: it saves the new user's `ID` and `Email` into the collection variables `userId` and `userEmail`, which the other requests use.\n\nDates (`CreatedAt`, `UpdatedAt`) are returned as short dates, e.g. `2026-10-29`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:3000" },
+    { "key": "userId", "value": "" },
+    { "key": "userEmail", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+        "description": "Expect 200 `{\"status\":\"ok\"}`."
+      }
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Save the created user for the other requests.",
+                  "if (pm.response.code === 201) {",
+                  "    const user = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', user.ID);",
+                  "    pm.collectionVariables.set('userEmail', user.Email);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"{{$randomFirstName}}\",\n  \"LastName\": \"{{$randomLastName}}\",\n  \"Email\": \"{{$randomEmail}}\",\n  \"Password\": \"supersecret\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "description": "Expect 201 with the new user and a `Location` header. Uses random names and email so it can be sent repeatedly."
+          }
+        },
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "description": "Expect 200 with an array of users, oldest first."
+          }
+        },
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "description": "Expect 200 with the user saved by **Create user**."
+          }
+        },
+        {
+          "name": "Update some fields (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"LastName\": \"King\"\n}" },
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "description": "Only the fields sent are changed. Expect 200 with the updated user."
+          }
+        },
+        {
+          "name": "Replace user (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Ada\",\n  \"LastName\": \"Lovelace\",\n  \"Email\": \"{{userEmail}}\",\n  \"Password\": \"anotherpass\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "description": "All four fields are required. Expect 200 with the replaced user."
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "description": "Expect 204 with no body. Sending it again gives 404."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error cases",
+      "item": [
+        {
+          "name": "Create with invalid fields (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"Name\": \"\",\n  \"Email\": \"not-an-email\",\n  \"Password\": \"123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "description": "Expect 400 with an `errors` array listing every problem."
+          }
+        },
+        {
+          "name": "Create with duplicate email (409)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Copy\",\n  \"LastName\": \"Cat\",\n  \"Email\": \"{{userEmail}}\",\n  \"Password\": \"supersecret\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "description": "Reuses the email of the last **Create user**, so that user must still exist. Expect 409."
+          }
+        },
+        {
+          "name": "Create with malformed JSON (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"Name\": " },
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "description": "Expect 400 `Request body is not valid JSON`."
+          }
+        },
+        {
+          "name": "PATCH with empty body (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "description": "Expect 400: at least one field is required."
+          }
+        },
+        {
+          "name": "PUT missing fields (400)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"Name\": \"Only\"\n}" },
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "description": "Expect 400 listing the missing fields."
+          }
+        },
+        {
+          "name": "Get unknown user (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users/00000000-0000-4000-8000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "00000000-0000-4000-8000-000000000000"]
+            },
+            "description": "A well-formed UUID that does not exist. Expect 404."
+          }
+        },
+        {
+          "name": "Get with invalid id (400)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users/123", "host": ["{{baseUrl}}"], "path": ["users", "123"] },
+            "description": "Ids must be UUIDs. Expect 400 `ID must be a valid UUID`."
+          }
+        },
+        {
+          "name": "Unknown route (404)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/nope", "host": ["{{baseUrl}}"], "path": ["nope"] },
+            "description": "Expect 404 `Cannot GET /nope`."
+          }
+        }
+      ]
+    }
+  ]
+}

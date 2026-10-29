@@ -1,3 +1,4 @@
+import type { UUID } from 'node:crypto';
 import type { Request, Response } from 'express';
 import {
     createUser,
@@ -6,12 +7,23 @@ import {
     findAllUsers,
     findUserById,
     updateUser,
+    type PublicUser,
     type User,
 } from '../models/userModel';
 
 const USER_FIELDS: (keyof User)[] = ['Name', 'LastName', 'Email', 'Password'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const MIN_PASSWORD_LENGTH = 8;
+
+// Short UTC date, e.g. 2026-10-29.
+function formatDate(date: Date): string {
+    return date.toISOString().slice(0, 10);
+}
+
+function toResponse(user: PublicUser) {
+    return { ...user, CreatedAt: formatDate(user.CreatedAt), UpdatedAt: formatDate(user.UpdatedAt) };
+}
 
 type Validation =
     | { ok: true; data: Partial<User> }
@@ -53,13 +65,14 @@ function validateUser(body: unknown, partial: boolean): Validation {
     return errors.length ? { ok: false, errors } : { ok: true, data };
 }
 
-function parseId(req: Request, res: Response): number | undefined {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-        res.status(400).json({ error: 'Id must be a positive integer' });
+// Ids are stored lowercase, so uppercase input is normalized before lookup.
+function parseId(req: Request, res: Response): UUID | undefined {
+    const id = String(req.params.id).toLowerCase();
+    if (!UUID_PATTERN.test(id)) {
+        res.status(400).json({ error: 'ID must be a valid UUID' });
         return undefined;
     }
-    return id;
+    return id as UUID;
 }
 
 function sendDuplicateOrRethrow(err: unknown, res: Response): void {
@@ -71,7 +84,7 @@ function sendDuplicateOrRethrow(err: unknown, res: Response): void {
 }
 
 export async function getUsers(_req: Request, res: Response): Promise<void> {
-    res.json(await findAllUsers());
+    res.json((await findAllUsers()).map(toResponse));
 }
 
 export async function getUser(req: Request, res: Response): Promise<void> {
@@ -83,7 +96,7 @@ export async function getUser(req: Request, res: Response): Promise<void> {
         res.status(404).json({ error: `User ${id} not found` });
         return;
     }
-    res.json(user);
+    res.json(toResponse(user));
 }
 
 export async function postUser(req: Request, res: Response): Promise<void> {
@@ -95,7 +108,7 @@ export async function postUser(req: Request, res: Response): Promise<void> {
 
     try {
         const user = await createUser(result.data as User);
-        res.status(201).location(`/users/${user.Id}`).json(user);
+        res.status(201).location(`/users/${user.ID}`).json(toResponse(user));
     } catch (err) {
         sendDuplicateOrRethrow(err, res);
     }
@@ -118,7 +131,7 @@ async function writeUser(req: Request, res: Response, partial: boolean): Promise
             res.status(404).json({ error: `User ${id} not found` });
             return;
         }
-        res.json(user);
+        res.json(toResponse(user));
     } catch (err) {
         sendDuplicateOrRethrow(err, res);
     }
